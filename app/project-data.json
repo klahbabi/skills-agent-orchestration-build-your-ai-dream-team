@@ -1,0 +1,36 @@
+{
+  "projects": [
+    {
+      "name": "Contributor Onboarding",
+      "owner": "Mona Patel",
+      "status": "Active",
+      "recentActivity": "Published the refreshed setup guide and paired with two new contributors.",
+      "priority": "High",
+      "summary": "Make it easier for new contributors to find their footing and make a first impact."
+    },
+    {
+      "name": "Documentation Refresh",
+      "owner": "Jordan Lee",
+      "status": "On track",
+      "recentActivity": "Completed a review of the API reference; navigation updates are next.",
+      "priority": "Medium",
+      "summary": "Bring key guides up to date and help people find trustworthy answers faster."
+    },
+    {
+      "name": "Release Readiness",
+      "owner": "Sam Rivera",
+      "status": "At risk",
+      "recentActivity": "Found two open test gaps that need owners before the release checkpoint.",
+      "priority": "Critical",
+      "summary": "Coordinate the remaining quality checks so the team can make a confident release decision."
+    },
+    {
+      "name": "Community Feedback Loop",
+      "owner": "Avery Chen",
+      "status": "Planned",
+      "recentActivity": "Collected recurring feedback themes and drafted a proposal for review.",
+      "priority": "Low",
+      "summary": "Turn community feedback into a regular, visible input to project planning."
+    }
+  ]
+}

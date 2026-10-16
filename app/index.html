@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A quick overview of project owners, status, recent activity, and priorities.">
+    <title>Project Pulse</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="dashboard-header">
+        <div class="dashboard-heading">
+          <p class="dashboard-eyebrow">Team overview</p>
+          <h1 class="dashboard-title">Project Pulse</h1>
+          <p class="dashboard-description">
+            A clear snapshot of what the team is moving forward, who owns it, and where attention is needed.
+          </p>
+        </div>
+        <p class="dashboard-summary" id="dashboard-summary" aria-live="polite">Loading projects…</p>
+      </header>
+
+      <section aria-label="Projects">
+        <div class="loading-state" id="loading-state" role="status" aria-live="polite">
+          <h2>Loading project updates</h2>
+          <p>Gathering the latest snapshot for the team.</p>
+        </div>
+
+        <div class="error-state" id="error-state" role="alert" hidden>
+          <h2>Project data could not be loaded</h2>
+          <p id="error-message">
+            Check that the project data is available, then try again.
+          </p>
+          <button id="retry-button" type="button">Try again</button>
+        </div>
+
+        <div class="empty-state" id="empty-state" role="status" hidden>
+          <h2>No projects yet</h2>
+          <p>There are no projects in this snapshot. Add projects to the data file to get started.</p>
+        </div>
+
+        <div class="project-grid" id="project-grid" aria-label="Project cards" hidden></div>
+      </section>
+    </main>
+
+    <script>
+      const dashboardSummary = document.querySelector("#dashboard-summary");
+      const loadingState = document.querySelector("#loading-state");
+      const errorState = document.querySelector("#error-state");
+      const errorMessage = document.querySelector("#error-message");
+      const emptyState = document.querySelector("#empty-state");
+      const projectGrid = document.querySelector("#project-grid");
+      const retryButton = document.querySelector("#retry-button");
+
+      function showOnly(state) {
+        loadingState.hidden = state !== "loading";
+        errorState.hidden = state !== "error";
+        emptyState.hidden = state !== "empty";
+        projectGrid.hidden = state !== "projects";
+        projectGrid.style.display = state === "projects" ? "" : "none";
+      }
+
+      function requireText(value, field, projectIndex) {
+        if (typeof value !== "string" || value.trim() === "") {
+          throw new Error(`Project ${projectIndex + 1} is missing a valid "${field}" value.`);
+        }
+        return value.trim();
+      }
+
+      function dataAttributeValue(value) {
+        return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      }
+
+      function createDetail(label, value) {
+        const detail = document.createElement("div");
+        detail.className = "project-detail";
+
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const description = document.createElement("dd");
+        description.textContent = value;
+
+        detail.append(term, description);
+        return detail;
+      }
+
+      function createProjectCard(project) {
+        const card = document.createElement("article");
+        card.className = "project-card";
+
+        const header = document.createElement("header");
+        header.className = "project-card-header";
+        const heading = document.createElement("div");
+        heading.className = "project-card-heading";
+
+        const title = document.createElement("h2");
+        title.className = "project-card-title";
+        title.textContent = project.name;
+
+        const owner = document.createElement("p");
+        owner.className = "project-owner";
+        owner.textContent = `Owner: ${project.owner}`;
+
+        const status = document.createElement("span");
+        status.className = "status-badge";
+        status.dataset.status = dataAttributeValue(project.status);
+        status.textContent = project.status;
+
+        heading.append(title, owner);
+        header.append(heading, status);
+
+        const summary = document.createElement("p");
+        summary.className = "project-summary";
+        summary.textContent = project.summary;
+
+        const details = document.createElement("dl");
+        details.className = "project-details";
+        details.append(createDetail("Recent activity", project.recentActivity));
+
+        const priorityDetail = document.createElement("div");
+        priorityDetail.className = "project-detail";
+        const priorityLabel = document.createElement("dt");
+        priorityLabel.textContent = "Priority";
+        const priorityValue = document.createElement("dd");
+        const priority = document.createElement("span");
+        priority.className = "priority-badge";
+        priority.dataset.priority = dataAttributeValue(project.priority);
+        priority.textContent = project.priority;
+        priorityValue.append(priority);
+        priorityDetail.append(priorityLabel, priorityValue);
+        details.append(priorityDetail);
+
+        card.append(header, summary, details);
+        return card;
+      }
+
+      async function loadProjects() {
+        showOnly("loading");
+        dashboardSummary.textContent = "Loading projects…";
+
+        try {
+          const response = await fetch("project-data.json", { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`The data request failed with HTTP ${response.status}.`);
+          }
+
+          const data = await response.json();
+          if (!data || !Array.isArray(data.projects)) {
+            throw new Error('The project data must contain a top-level "projects" array.');
+          }
+
+          const projects = data.projects.map((project, index) => ({
+            name: requireText(project?.name, "name", index),
+            owner: requireText(project?.owner, "owner", index),
+            status: requireText(project?.status, "status", index),
+            recentActivity: requireText(project?.recentActivity, "recentActivity", index),
+            priority: requireText(project?.priority, "priority", index),
+            summary: requireText(project?.summary, "summary", index)
+          }));
+
+          projectGrid.replaceChildren();
+          if (projects.length === 0) {
+            dashboardSummary.textContent = "No projects";
+            showOnly("empty");
+            return;
+          }
+
+          const cards = projects.map(createProjectCard);
+          projectGrid.append(...cards);
+          dashboardSummary.textContent = `${projects.length} ${projects.length === 1 ? "project" : "projects"}`;
+          showOnly("projects");
+        } catch (error) {
+          dashboardSummary.textContent = "Project data unavailable";
+          errorMessage.textContent = error instanceof Error
+            ? `${error.message} Make sure the dashboard is served over HTTP and the JSON file is valid.`
+            : "An unexpected error occurred. Make sure the dashboard is served over HTTP and the JSON file is valid.";
+          showOnly("error");
+        }
+      }
+
+      retryButton.addEventListener("click", loadProjects);
+      loadProjects();
+    </script>
+  </body>
+</html>
